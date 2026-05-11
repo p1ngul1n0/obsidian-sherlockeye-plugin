@@ -83,7 +83,6 @@ export default class SherlockeyePlugin extends Plugin {
 		try {
 			statusBar.setText("Searching...");
 
-			const url = "https://api.sherlockeye.io/v1/searches/sync";
 			const additional_modules = this.settings?.deepSearch
 				? ["digital_accounts_expansion"]
 				: [];
@@ -91,37 +90,72 @@ export default class SherlockeyePlugin extends Plugin {
 			const data = {
 				type: type,
 				value: identifier,
-				timeoutSeconds: 60,
 				additional_modules: additional_modules,
 			};
-			const response = await fetch(url, {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${this.settings.apiToken}`,
-					"Content-Type": "application/json",
+			const response = await fetch(
+				"https://api.sherlockeye.io/v1/searches",
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${this.settings.apiToken}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(data),
 				},
-				body: JSON.stringify(data),
-			});
+			);
 
-			if (response.ok) {
-				const data = await response.json();
-
-				if (data.success) {
-					if (data.data?.results && data.data.results.length > 0) {
-						statusBar.setText(
-							"Found " + data.data.results.length + " results",
-						);
-						await this.processResults(
-							identifier,
-							data.data.results,
-						);
-						statusBar.remove();
-					} else {
-						statusBar.setText("No results found!");
-					}
-				}
+			if (!response.ok) {
+				new Notice("Error starting search!");
+				statusBar.remove();
 				return;
 			}
+
+			const initialData = await response.json();
+			if (!initialData.success) {
+				new Notice("Search failed!");
+				statusBar.remove();
+				return;
+			}
+
+			const searchId = initialData.data.searchId;
+			let lastCount = 0;
+			let completed = false;
+
+			while (!completed) {
+				const pollResponse = await fetch(
+					`https://api.sherlockeye.io/v1/searches/${searchId}`,
+					{
+						headers: {
+							Authorization: `Bearer ${this.settings.apiToken}`,
+						},
+					},
+				);
+				const pollData = await pollResponse.json();
+
+				if (pollData.success && pollData.data.results) {
+					if (pollData.data.results.length > lastCount) {
+						const newResults =
+							pollData.data.results.slice(lastCount);
+						await this.processResults(identifier, newResults);
+						lastCount = pollData.data.results.length;
+					}
+
+					statusBar.setText(
+						`Searching... ${pollData.data.progress}%`,
+					);
+
+					if (pollData.data.status === "complete") {
+						completed = true;
+						statusBar.setText(`Found ${lastCount} results`);
+					}
+				}
+
+				if (!completed) {
+					await new Promise((r) => setTimeout(r, 2000));
+				}
+			}
+
+			statusBar.remove();
 		} catch (err) {
 			new Notice("Error using Sherlockeye API!");
 			console.log(err);
