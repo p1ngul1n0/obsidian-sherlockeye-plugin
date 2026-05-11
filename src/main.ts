@@ -6,7 +6,7 @@ import {
 } from "./settings";
 
 export default class SherlockeyePlugin extends Plugin {
-	settings: SherlockeyeSettings | undefined;
+	settings: SherlockeyeSettings = DEFAULT_SETTINGS;
 
 	async onload() {
 		await this.loadSettings();
