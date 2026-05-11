@@ -1,80 +1,71 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import { Plugin, addIcon, Notice } from "obsidian";
+import {
+	SherlockeyeSettingTab,
+	DEFAULT_SETTINGS,
+	SherlockeyeSettings,
+} from "./settings";
 
-// Remember to rename these classes and interfaces!
-
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class SherlockeyePlugin extends Plugin {
+	settings: SherlockeyeSettings | undefined;
 
 	async onload() {
 		await this.loadSettings();
+		this.addSettingTab(new SherlockeyeSettingTab(this.app, this));
+		addIcon(
+			"sherlockeye-icon",
+			`<svg viewBox="0 0 53 53" fill="none" xmlns="http://www.w3.org/2000/svg">
+	<path d="M17.4586 17.4743H0V52.4227H34.9171V34.9485C25.2749 34.9485 17.4586 27.1251 17.4586 17.4743Z" fill="currentColor"/>
+	<path d="M34.9168 0C25.2746 0 17.4583 7.82337 17.4583 17.4742H34.9168V34.9484C44.559 34.9484 52.3754 27.125 52.3754 17.4742C52.3754 7.82337 44.559 0 34.9168 0Z" fill="currentColor"/>
+	</svg>`,
+		);
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+		this.registerEvent(
+			this.app.workspace.on("editor-menu", (menu, editor, view) => {
+				const selectedText = editor.getSelection();
+				if (selectedText) {
+					menu.addItem((item) => {
+						item.setTitle('Search "' + selectedText + '"')
+							.setIcon("sherlockeye-icon")
+							.onClick(async () => {
+								const statusBar = this.addStatusBarItem();
+								await search(
+									selectedText,
+									statusBar,
+									this.settings?.apiToken,
+								);
+							});
+					});
 				}
-				return false;
-			}
-		});
+			}),
+		);
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-
-	}
-
-	onunload() {
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file) => {
+				const fileName = file.name.replace(/\.[^.]+$/, "");
+				if (fileName) {
+					menu.addItem((item) => {
+						item.setTitle('Search "' + fileName + '"')
+							.setIcon("sherlockeye-icon")
+							.onClick(async () => {
+								const statusBar = this.addStatusBarItem();
+								await search(
+									fileName,
+									statusBar,
+									this.settings?.apiToken,
+								);
+							});
+					});
+				}
+			}),
+		);
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData(),
+		);
 	}
 
 	async saveSettings() {
@@ -82,18 +73,42 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
+async function search(
+	identifier: string,
+	statusBar: HTMLElement,
+	apiToken: string | undefined,
+) {
+	if (!apiToken) {
+		new Notice("Set your API Key in Sherlockeye Settings!");
+		return;
 	}
 
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
+	try {
+		statusBar.setText("Searching...");
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+		const token = apiToken;
+
+		const response = await fetch(
+			"https://api.sherlockeye.io/v1/searches/sync",
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${token}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					type: "email",
+					value: identifier,
+					timeoutSeconds: 60,
+					additional_modules: ["digital_accounts_expansion"],
+				}),
+			},
+		);
+
+		const data = await response.json();
+		console.log(data.data.results);
+	} catch (err) {
+		new Notice("Error using Sherlockeye API!");
+		console.log(err);
 	}
 }
