@@ -28,11 +28,7 @@ export default class SherlockeyePlugin extends Plugin {
 							.setIcon("sherlockeye-icon")
 							.onClick(async () => {
 								const statusBar = this.addStatusBarItem();
-								await search(
-									selectedText,
-									statusBar,
-									this.settings?.apiToken,
-								);
+								await this.performSearch(selectedText, statusBar);
 							});
 					});
 				}
@@ -48,11 +44,7 @@ export default class SherlockeyePlugin extends Plugin {
 							.setIcon("sherlockeye-icon")
 							.onClick(async () => {
 								const statusBar = this.addStatusBarItem();
-								await search(
-									fileName,
-									statusBar,
-									this.settings?.apiToken,
-								);
+								await this.performSearch(fileName, statusBar);
 							});
 					});
 				}
@@ -71,44 +63,78 @@ export default class SherlockeyePlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
-}
 
-async function search(
-	identifier: string,
-	statusBar: HTMLElement,
-	apiToken: string | undefined,
-) {
-	if (!apiToken) {
-		new Notice("Set your API Key in Sherlockeye Settings!");
-		return;
+	private async performSearch(
+		identifier: string,
+		statusBar: HTMLElement,
+	) {
+		if (!this.settings?.apiToken) {
+			new Notice("Set your API Key in Sherlockeye Settings!");
+			statusBar.remove();
+			return;
+		}
+
+		try {
+			statusBar.setText("Searching...");
+
+			const response = await fetch(
+				"https://api.sherlockeye.io/v1/searches/sync",
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${this.settings.apiToken}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						type: "name",
+						value: identifier,
+						timeoutSeconds: 60,
+						additional_modules: ["digital_accounts_expansion"],
+					}),
+				},
+			);
+
+			if (response.ok) {
+				const data = await response.json();
+
+				if (data.success) {
+					if (data.data?.results && data.data.results.length > 0) {
+						statusBar.setText(
+							"Found " + data.data.results.length + " results",
+						);
+						await this.processResults(data.data.results, statusBar);
+					} else {
+						statusBar.setText("No results found!");
+					}
+				}
+				return;
+			}
+		} catch (err) {
+			new Notice("Error using Sherlockeye API!");
+			console.log(err);
+			statusBar.remove();
+		}
 	}
 
-	try {
-		statusBar.setText("Searching...");
+	private async processResults(
+		results: any[],
+		statusBar: HTMLElement,
+	) {
+		const names = new Set<string>();
 
-		const token = apiToken;
+		results.forEach((result) => {
+			if (result.attributes.name) {
+				names.add(result.attributes.name);
+			}
+		});
 
-		const response = await fetch(
-			"https://api.sherlockeye.io/v1/searches/sync",
-			{
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${token}`,
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					type: "email",
-					value: identifier,
-					timeoutSeconds: 60,
-					additional_modules: ["digital_accounts_expansion"],
-				}),
-			},
-		);
+		for (const name of names) {
+			await this.app.vault.create(
+				`👤 ${name}.md`,
+				`# ${name}\n\nFound via Sherlockeye API`,
+			);
+		}
 
-		const data = await response.json();
-		console.log(data.data.results);
-	} catch (err) {
-		new Notice("Error using Sherlockeye API!");
-		console.log(err);
+		statusBar.remove();
 	}
 }
