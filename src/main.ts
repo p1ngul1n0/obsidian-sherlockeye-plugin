@@ -28,7 +28,10 @@ export default class SherlockeyePlugin extends Plugin {
 							.setIcon("sherlockeye-icon")
 							.onClick(async () => {
 								const statusBar = this.addStatusBarItem();
-								await this.performSearch(selectedText, statusBar);
+								await this.performSearch(
+									selectedText,
+									statusBar,
+								);
 							});
 					});
 				}
@@ -64,10 +67,7 @@ export default class SherlockeyePlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	private async performSearch(
-		identifier: string,
-		statusBar: HTMLElement,
-	) {
+	private async performSearch(identifier: string, statusBar: HTMLElement) {
 		if (!this.settings?.apiToken) {
 			new Notice("Set your API Key in Sherlockeye Settings!");
 			statusBar.remove();
@@ -86,7 +86,7 @@ export default class SherlockeyePlugin extends Plugin {
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
-						type: "name",
+						type: "email",
 						value: identifier,
 						timeoutSeconds: 60,
 						additional_modules: ["digital_accounts_expansion"],
@@ -102,7 +102,11 @@ export default class SherlockeyePlugin extends Plugin {
 						statusBar.setText(
 							"Found " + data.data.results.length + " results",
 						);
-						await this.processResults(data.data.results, statusBar);
+						await this.processResults(
+							identifier,
+							data.data.results,
+						);
+						statusBar.remove();
 					} else {
 						statusBar.setText("No results found!");
 					}
@@ -116,25 +120,31 @@ export default class SherlockeyePlugin extends Plugin {
 		}
 	}
 
-	private async processResults(
-		results: any[],
-		statusBar: HTMLElement,
-	) {
-		const names = new Set<string>();
+	private async processResults(identifier: string, results: any[]) {
+		const identifiers = new Set<string>();
+		const relevantAttributes = [
+			"name",
+			"full_name",
+			"email",
+			"phone",
+			"legal_name",
+			"domain",
+		];
 
 		results.forEach((result) => {
-			if (result.attributes.name) {
-				names.add(result.attributes.name);
-			}
+			relevantAttributes.forEach((attrib) => {
+				if (result.attributes[attrib]) {
+					if (identifier != result.attributes[attrib]) {
+						console.log(result.attributes[attrib]);
+						identifiers.add(result.attributes[attrib]);
+					}
+				}
+			});
 		});
 
-		for (const name of names) {
-			await this.app.vault.create(
-				`👤 ${name}.md`,
-				`# ${name}\n\nFound via Sherlockeye API`,
-			);
+		for (const i of identifiers) {
+			const content = `Found via search for [[${identifier}]] in Sherlockeye`;
+			await this.app.vault.create(`${i}.md`, content);
 		}
-
-		statusBar.remove();
 	}
 }
