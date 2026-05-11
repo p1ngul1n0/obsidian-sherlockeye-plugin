@@ -1,4 +1,4 @@
-import { Plugin, addIcon, Notice } from "obsidian";
+import { Plugin, addIcon, Notice, TFile } from "obsidian";
 import {
 	SherlockeyeSettingTab,
 	DEFAULT_SETTINGS,
@@ -77,22 +77,24 @@ export default class SherlockeyePlugin extends Plugin {
 		try {
 			statusBar.setText("Searching...");
 
-			const response = await fetch(
-				"https://api.sherlockeye.io/v1/searches/sync",
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${this.settings.apiToken}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						type: "email",
-						value: identifier,
-						timeoutSeconds: 60,
-						additional_modules: ["digital_accounts_expansion"],
-					}),
+			const url = "https://api.sherlockeye.io/v1/searches/sync";
+			const additional_modules = this.settings?.deepSearch
+				? ["digital_accounts_expansion"]
+				: [];
+			const data = {
+				type: "email",
+				value: identifier,
+				timeoutSeconds: 60,
+				additional_modules: additional_modules,
+			};
+			const response = await fetch(url, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${this.settings.apiToken}`,
+					"Content-Type": "application/json",
 				},
-			);
+				body: JSON.stringify(data),
+			});
 
 			if (response.ok) {
 				const data = await response.json();
