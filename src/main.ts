@@ -124,14 +124,7 @@ export default class SherlockeyePlugin extends Plugin {
 
 	private async processResults(identifier: string, results: any[]) {
 		const identifiers = new Set<string>();
-		const relevantAttributes = [
-			"name",
-			"full_name",
-			"email",
-			"phone",
-			"legal_name",
-			"domain",
-		];
+		const relevantAttributes = ["name", "full_name", "email", "phone"];
 
 		results.forEach((result) => {
 			relevantAttributes.forEach((attrib) => {
