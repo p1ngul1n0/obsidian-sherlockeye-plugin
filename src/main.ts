@@ -24,7 +24,10 @@ export default class SherlockeyePlugin extends Plugin {
 				const selectedText = editor.getSelection();
 				if (selectedText) {
 					menu.addItem((item) => {
-						item.setTitle('Search "' + selectedText + '"')
+						const type = this.detectSearchType(selectedText);
+						item.setTitle(
+							'Search "' + selectedText + '" (' + type + ")",
+						)
 							.setIcon("sherlockeye-icon")
 							.onClick(async () => {
 								const statusBar = this.addStatusBarItem();
@@ -42,8 +45,11 @@ export default class SherlockeyePlugin extends Plugin {
 			this.app.workspace.on("file-menu", (menu, file) => {
 				const fileName = file.name.replace(/\.[^.]+$/, "");
 				if (fileName) {
+					const type = this.detectSearchType(fileName);
 					menu.addItem((item) => {
-						item.setTitle('Search "' + fileName + '"')
+						item.setTitle(
+							'Search "' + fileName + '" (' + type + ")",
+						)
 							.setIcon("sherlockeye-icon")
 							.onClick(async () => {
 								const statusBar = this.addStatusBarItem();
@@ -81,8 +87,9 @@ export default class SherlockeyePlugin extends Plugin {
 			const additional_modules = this.settings?.deepSearch
 				? ["digital_accounts_expansion"]
 				: [];
+			const type = this.detectSearchType(identifier);
 			const data = {
-				type: "email",
+				type: type,
 				value: identifier,
 				timeoutSeconds: 60,
 				additional_modules: additional_modules,
@@ -124,7 +131,13 @@ export default class SherlockeyePlugin extends Plugin {
 
 	private async processResults(identifier: string, results: any[]) {
 		const identifiers = new Set<string>();
-		const relevantAttributes = ["name", "full_name", "email", "phone"];
+		const relevantAttributes = [
+			"name",
+			"full_name",
+			"legal_name",
+			"email",
+			"phone",
+		];
 
 		results.forEach((result) => {
 			relevantAttributes.forEach((attrib) => {
@@ -141,5 +154,41 @@ export default class SherlockeyePlugin extends Plugin {
 			const content = `Found via search for [[${identifier}]] in Sherlockeye`;
 			await this.app.vault.create(`${i}.md`, content);
 		}
+	}
+
+	private detectSearchType(identifier: string): string {
+		if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+			return "email";
+		}
+
+		if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$/.test(identifier)) {
+			return "cpf";
+		}
+
+		if (/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$|^\d{14}$/.test(identifier)) {
+			return "cnpj";
+		}
+
+		if (/^\+?[\d\s\-\(\)]{10,}$/.test(identifier)) {
+			return "phone";
+		}
+
+		if (
+			/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/.test(
+				identifier,
+			)
+		) {
+			return "domain";
+		}
+
+		if (/^(\d{1,3}\.){3}\d{1,3}$/.test(identifier)) {
+			return "ip";
+		}
+
+		if (/^[a-zA-Z0-9._-]+$/.test(identifier) && !identifier.includes(" ")) {
+			return "username";
+		}
+
+		return "name";
 	}
 }
