@@ -171,12 +171,13 @@ export default class SherlockeyePlugin extends Plugin {
 
 		const accounts: Account[] = [];
 		results.forEach((result) => {
-			if (result.source != "HaveIBeenPwned") {
-				accounts.push({
-					source: result.source,
-					attributes: result.attributes,
-				});
-			}
+			accounts.push({
+				source:
+					result.source === "HaveIBeenPwned"
+						? result.attributes.source
+						: result.source,
+				attributes: result.attributes,
+			});
 		});
 
 		for (const account of accounts) {
@@ -186,7 +187,11 @@ export default class SherlockeyePlugin extends Plugin {
 				content += `**${key}**: ${account.attributes[key]}\n`;
 			});
 
-			await this.app.vault.create(`${account.source}.md`, content);
+			try {
+				await this.app.vault.create(`${account.source}.md`, content);
+			} catch (err) {
+				continue;
+			}
 		}
 	}
 
