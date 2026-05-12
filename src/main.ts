@@ -189,6 +189,7 @@ export default class SherlockeyePlugin extends Plugin {
 			"phone",
 			"ip",
 			"domain",
+			"tax_id",
 		];
 
 		for (const account of accounts) {
