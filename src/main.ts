@@ -164,33 +164,29 @@ export default class SherlockeyePlugin extends Plugin {
 	}
 
 	private async processResults(identifier: string, results: any[]) {
-		const identifiers = new Set<string>();
-		const noteWorthyAttributes = [
-			"full_name",
-			"email",
-			"phone",
-			"ip",
-			"username",
-			"domain",
-		];
+		interface Account {
+			source: string;
+			attributes: Record<string, any>;
+		}
 
+		const accounts: Account[] = [];
 		results.forEach((result) => {
-			noteWorthyAttributes.forEach((attrib) => {
-				if (result.attributes[attrib]) {
-					identifiers.add(result.attributes[attrib]);
-					console.log(
-						"Created note => " +
-							result.attributes[attrib] +
-							" from " +
-							result.source,
-					);
-				}
-			});
+			if (result.source != "HaveIBeenPwned") {
+				accounts.push({
+					source: result.source,
+					attributes: result.attributes,
+				});
+			}
 		});
 
-		for (const i of identifiers) {
-			const content = `Found via search for [[${identifier}]] in Sherlockeye`;
-			await this.app.vault.create(`${i}.md`, content);
+		for (const account of accounts) {
+			let content = `Found via search for [[${identifier}]] in Sherlockeye\n\n`;
+
+			Object.keys(account.attributes).forEach((key) => {
+				content += `**${key}**: ${account.attributes[key]}\n`;
+			});
+
+			await this.app.vault.create(`${account.source}.md`, content);
 		}
 	}
 
