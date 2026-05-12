@@ -166,25 +166,45 @@ export default class SherlockeyePlugin extends Plugin {
 	private async processResults(identifier: string, results: any[]) {
 		interface Account {
 			source: string;
+			isHIBP: boolean;
 			attributes: Record<string, any>;
 		}
 
 		const accounts: Account[] = [];
+
 		results.forEach((result) => {
 			accounts.push({
 				source:
 					result.source === "HaveIBeenPwned"
 						? result.attributes.source
 						: result.source,
+				isHIBP: result.source === "HaveIBeenPwned",
 				attributes: result.attributes,
 			});
 		});
+
+		const linkableAttributes = [
+			"username",
+			"email",
+			"phone",
+			"ip",
+			"domain",
+		];
 
 		for (const account of accounts) {
 			let content = `Found via search for [[${identifier}]] in Sherlockeye\n\n`;
 
 			Object.keys(account.attributes).forEach((key) => {
-				content += `**${key}**: ${account.attributes[key]}\n`;
+				if (account.isHIBP && key === "domain") {
+					return;
+				}
+				const value = account.attributes[key];
+
+				if (linkableAttributes.includes(key)) {
+					content += `**${key}**: [[${value}]]\n`;
+				} else {
+					content += `**${key}**: ${value}\n`;
+				}
 			});
 
 			try {
