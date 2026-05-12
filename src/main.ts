@@ -165,21 +165,25 @@ export default class SherlockeyePlugin extends Plugin {
 
 	private async processResults(identifier: string, results: any[]) {
 		const identifiers = new Set<string>();
-		const relevantAttributes = [
-			"name",
+		const noteWorthyAttributes = [
 			"full_name",
-			"legal_name",
 			"email",
 			"phone",
+			"ip",
+			"username",
+			"domain",
 		];
 
 		results.forEach((result) => {
-			relevantAttributes.forEach((attrib) => {
+			noteWorthyAttributes.forEach((attrib) => {
 				if (result.attributes[attrib]) {
-					if (identifier != result.attributes[attrib]) {
-						console.log(result.attributes[attrib]);
-						identifiers.add(result.attributes[attrib]);
-					}
+					identifiers.add(result.attributes[attrib]);
+					console.log(
+						"Created note => " +
+							result.attributes[attrib] +
+							" from " +
+							result.source,
+					);
 				}
 			});
 		});
