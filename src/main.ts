@@ -185,11 +185,14 @@ export default class SherlockeyePlugin extends Plugin {
 
 		const linkableAttributes = [
 			"username",
+			"name",
+			"full_name",
 			"email",
 			"phone",
 			"ip",
 			"domain",
 			"tax_id",
+			"registrant",
 		];
 
 		for (const account of accounts) {
@@ -200,6 +203,10 @@ export default class SherlockeyePlugin extends Plugin {
 					return;
 				}
 				const value = account.attributes[key];
+
+				if (value == "REDACTED FOR PRIVACY") {
+					return;
+				}
 
 				if (linkableAttributes.includes(key)) {
 					content += `**${key}**: [[${value}]]\n`;
