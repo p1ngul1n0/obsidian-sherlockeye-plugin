@@ -3,7 +3,7 @@
 	"name": "Sherlockeye OSINT",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Sherlockeye OSINT API integration for automated intelligence gathering",
+	"description": "Automated intelligence gathering using the Sherlockeye API.",
 	"author": "p1ngul1n0",
 	"authorUrl": "https://github.com/p1ngul1n0",
 	"isDesktopOnly": true
