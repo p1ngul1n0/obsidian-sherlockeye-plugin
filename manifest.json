@@ -1,11 +1,10 @@
 {
-	"id": "sherlockeye-plugin",
+	"id": "sherlockeye",
 	"name": "Sherlockeye",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Use the Sherlockeye API directly from within Obsidian.",
+	"description": "Sherlockeye OSINT API integration for automated intelligence gathering",
 	"author": "p1ngul1n0",
 	"authorUrl": "https://github.com/p1ngul1n0",
-	"isDesktopOnly": true,
-	"repo": "p1ngul1n0/obsidian-sherlockeye"
+	"isDesktopOnly": true
 }
