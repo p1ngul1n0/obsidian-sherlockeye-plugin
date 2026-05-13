@@ -87,7 +87,7 @@ export default class SherlockeyePlugin extends Plugin {
 			{},
 			DEFAULT_SETTINGS,
 			await this.loadData(),
-		);
+		) as SherlockeyeSettings;
 	}
 
 	async saveSettings() {

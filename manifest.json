@@ -1,7 +1,7 @@
 {
 	"id": "sherlockeye-osint",
 	"name": "Sherlockeye OSINT",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"minAppVersion": "0.15.0",
 	"description": "Automated intelligence gathering using the Sherlockeye API.",
 	"author": "p1ngul1n0",
