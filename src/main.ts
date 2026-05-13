@@ -83,11 +83,8 @@ export default class SherlockeyePlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData(),
-		) as SherlockeyeSettings;
+		const loadedData = (await this.loadData()) as Partial<SherlockeyeSettings>;
+		this.settings = { ...DEFAULT_SETTINGS, ...loadedData };
 	}
 
 	async saveSettings() {
