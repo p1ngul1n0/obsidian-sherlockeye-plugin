@@ -1,4 +1,4 @@
-import { Plugin, addIcon, Notice, TFile } from "obsidian";
+import { Plugin, addIcon, Notice } from "obsidian";
 import {
 	SherlockeyeSettingTab,
 	DEFAULT_SETTINGS,
