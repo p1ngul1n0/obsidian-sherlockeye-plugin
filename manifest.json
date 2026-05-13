@@ -1,6 +1,6 @@
 {
-	"id": "sherlockeye-extension",
-	"name": "Sherlockeye",
+	"id": "sherlockeye-osint",
+	"name": "Sherlockeye OSINT",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Sherlockeye OSINT API integration for automated intelligence gathering",
