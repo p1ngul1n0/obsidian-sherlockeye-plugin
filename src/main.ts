@@ -1,9 +1,30 @@
-import { Plugin, addIcon, Notice } from "obsidian";
+import { Plugin, addIcon, Notice, requestUrl } from "obsidian";
 import {
 	SherlockeyeSettingTab,
 	DEFAULT_SETTINGS,
 	SherlockeyeSettings,
 } from "./settings";
+
+interface SearchResponse {
+	success: boolean;
+	data: {
+		searchId: string;
+		progress: number;
+		status: string;
+		results: SearchResult[];
+	};
+}
+
+interface SearchResult {
+	source: string;
+	attributes: Record<string, string | undefined>;
+}
+
+interface Account {
+	source: string;
+	isHIBP: boolean;
+	attributes: Record<string, string | undefined>;
+}
 
 export default class SherlockeyePlugin extends Plugin {
 	settings: SherlockeyeSettings = DEFAULT_SETTINGS;
@@ -92,25 +113,17 @@ export default class SherlockeyePlugin extends Plugin {
 				value: identifier,
 				additional_modules: additional_modules,
 			};
-			const response = await fetch(
-				"https://api.sherlockeye.io/v1/searches",
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${this.settings.apiToken}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(data),
+			const response = await requestUrl({
+				url: "https://api.sherlockeye.io/v1/searches",
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${this.settings.apiToken}`,
+					"Content-Type": "application/json",
 				},
-			);
+				body: JSON.stringify(data),
+			});
 
-			if (!response.ok) {
-				new Notice("Error starting search!");
-				statusBar.remove();
-				return;
-			}
-
-			const initialData = await response.json();
+			const initialData = response.json as SearchResponse;
 			if (!initialData.success) {
 				new Notice("Search failed!");
 				statusBar.remove();
@@ -122,15 +135,14 @@ export default class SherlockeyePlugin extends Plugin {
 			let completed = false;
 
 			while (!completed) {
-				const pollResponse = await fetch(
-					`https://api.sherlockeye.io/v1/searches/${searchId}`,
-					{
-						headers: {
-							Authorization: `Bearer ${this.settings.apiToken}`,
-						},
+				const pollResponse = await requestUrl({
+					url: `https://api.sherlockeye.io/v1/searches/${searchId}`,
+					method: "GET",
+					headers: {
+						Authorization: `Bearer ${this.settings.apiToken}`,
 					},
-				);
-				const pollData = await pollResponse.json();
+				});
+				const pollData = pollResponse.json as SearchResponse;
 
 				if (pollData.success && pollData.data.results) {
 					if (pollData.data.results.length > lastCount) {
@@ -151,32 +163,25 @@ export default class SherlockeyePlugin extends Plugin {
 				}
 
 				if (!completed) {
-					await new Promise((r) => setTimeout(r, 2000));
+					await new Promise((r) => window.setTimeout(r, 2000));
 				}
 			}
 
 			statusBar.remove();
-		} catch (err) {
+		} catch {
 			new Notice("Error using Sherlockeye API!");
-			console.log(err);
 			statusBar.remove();
 		}
 	}
 
-	private async processResults(identifier: string, results: any[]) {
-		interface Account {
-			source: string;
-			isHIBP: boolean;
-			attributes: Record<string, any>;
-		}
-
+	private async processResults(identifier: string, results: SearchResult[]) {
 		const accounts: Account[] = [];
 
 		results.forEach((result) => {
 			accounts.push({
 				source:
 					result.source === "HaveIBeenPwned"
-						? result.attributes.source
+						? (result.attributes.source ?? "Unknown")
 						: result.source,
 				isHIBP: result.source === "HaveIBeenPwned",
 				attributes: result.attributes,
@@ -217,7 +222,7 @@ export default class SherlockeyePlugin extends Plugin {
 
 			try {
 				await this.app.vault.create(`${account.source}.md`, content);
-			} catch (err) {
+			} catch {
 				continue;
 			}
 		}
@@ -236,7 +241,7 @@ export default class SherlockeyePlugin extends Plugin {
 			return "cnpj";
 		}
 
-		if (/^\+?[\d\s\-\(\)]{10,}$/.test(identifier)) {
+		if (/^\+?[\d\s\-()]{10,}$/.test(identifier)) {
 			return "phone";
 		}
 
