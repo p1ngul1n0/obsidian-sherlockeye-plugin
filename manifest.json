@@ -4,7 +4,8 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Use the Sherlockeye API directly from within Obsidian.",
-	"author": "sherlockeye",
-	"authorUrl": "https://sherlockeye.io/",
-	"isDesktopOnly": true
+	"author": "p1ngul1n0",
+	"authorUrl": "https://github.com/p1ngul1n0",
+	"isDesktopOnly": true,
+	"repo": "p1ngul1n0/obsidian-sherlockeye"
 }
