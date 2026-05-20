@@ -22,4 +22,4 @@ A plugin that integrates the Sherlockeye OSINT API directly into your note-takin
 
 ## API Key
 
-You need a valid Sherlockeye API key to use this plugin. Get one at [sherlockeye.io](https://sherlockeye.io)
+You need a valid Sherlockeye API key to use this plugin. Get one at [sherlockeye.io](https://sherlockeye.io/?utm_source=obsidian.md)

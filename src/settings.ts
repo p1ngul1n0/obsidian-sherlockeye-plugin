@@ -25,7 +25,15 @@ export class SherlockeyeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("API Key")
-			.setDesc("Put your Sherlockeye API Key here")
+			.setDesc(
+				createFragment((frag) => {
+					frag.appendText("Get your API key at ");
+					frag.createEl("a", {
+						text: "sherlockeye.io",
+						href: "https://sherlockeye.io/?utm_source=obsidian.md",
+					});
+				}),
+			)
 			.addText((text) => {
 				text.inputEl.type = "password";
 				text.setValue(this.plugin.settings?.apiToken).onChange(
